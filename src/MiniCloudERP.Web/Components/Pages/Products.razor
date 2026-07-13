@@ -1,0 +1,261 @@
+@page "/products"
+@rendermode InteractiveServer
+@using MiniCloudERP.Business.Categories
+@using MiniCloudERP.Business.Common
+@using MiniCloudERP.Business.Products
+@using MiniCloudERP.Entities.Models
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+
+<PageTitle>Products</PageTitle>
+
+<h1>Products</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Add Product</h5>
+
+        <EditForm Model="newProduct" OnValidSubmit="AddProductAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="newProduct.Name" />
+                    <ValidationMessage For="@(() => newProduct.Name)" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">SKU</label>
+                    <InputText class="form-control" @bind-Value="newProduct.Sku" />
+                    <ValidationMessage For="@(() => newProduct.Sku)" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Barcode</label>
+                    <InputText class="form-control" @bind-Value="newProduct.Barcode" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Category</label>
+                    <InputSelect class="form-select" @bind-Value="newProduct.CategoryId">
+                        <option value="0">Select category...</option>
+                        @if (categories is not null)
+                        {
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => newProduct.CategoryId)" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Purchase Price</label>
+                    <InputNumber class="form-control" @bind-Value="newProduct.PurchasePrice" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sale Price</label>
+                    <InputNumber class="form-control" @bind-Value="newProduct.SalePrice" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Current Stock</label>
+                    <InputNumber class="form-control" @bind-Value="newProduct.CurrentStock" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Add Product</button>
+        </EditForm>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert alert-success">@message</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (products is null)
+{
+    <p>Loading...</p>
+}
+else if (products.Count == 0)
+{
+    <div class="alert alert-info">No products found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>SKU</th>
+                    <th>Barcode</th>
+                    <th>Category</th>
+                    <th class="text-end">Purchase</th>
+                    <th class="text-end">Sale</th>
+                    <th class="text-end">Stock</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in products)
+                {
+                    <tr class="@(product.CurrentStock <= 10 ? "table-warning" : null)">
+                        @if (editingProductId == product.Id)
+                        {
+                            <td><input class="form-control form-control-sm" @bind="editProduct.Name" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editProduct.Sku" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editProduct.Barcode" /></td>
+                            <td>
+                                <select class="form-select form-select-sm" @bind="editProduct.CategoryId">
+                                    @if (categories is not null)
+                                    {
+                                        @foreach (var category in categories)
+                                        {
+                                            <option value="@category.Id">@category.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </td>
+                            <td><input class="form-control form-control-sm text-end" type="number" step="0.01" @bind="editProduct.PurchasePrice" /></td>
+                            <td><input class="form-control form-control-sm text-end" type="number" step="0.01" @bind="editProduct.SalePrice" /></td>
+                            <td><input class="form-control form-control-sm text-end" type="number" @bind="editProduct.CurrentStock" /></td>
+                            <td class="text-end">
+                                <button class="btn btn-success btn-sm me-2" @onclick="SaveEditAsync">Save</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>@product.Name</td>
+                            <td>@product.Sku</td>
+                            <td>@product.Barcode</td>
+                            <td>@product.Category?.Name</td>
+                            <td class="text-end">@product.PurchasePrice.ToString("C")</td>
+                            <td class="text-end">@product.SalePrice.ToString("C")</td>
+                            <td class="text-end">@product.CurrentStock</td>
+                            <td class="text-end">
+                                <button class="btn btn-warning btn-sm me-2" @onclick="() => StartEdit(product)">Edit</button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteAsync(product.Id)">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Product>? products;
+    private List<Category>? categories;
+    private Product newProduct = new();
+    private Product editProduct = new();
+    private int? editingProductId;
+    private string? message;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await CategoryService.GetAllAsync();
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        products = await ProductService.GetAllAsync();
+    }
+
+    private async Task AddProductAsync()
+    {
+        errorMessage = null;
+
+        try
+        {
+            await ProductService.AddAsync(newProduct);
+            await LoadProductsAsync();
+            newProduct = new Product();
+            message = "Product added successfully.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while saving the product. Please try again.";
+        }
+    }
+
+    private void StartEdit(Product product)
+    {
+        editingProductId = product.Id;
+        editProduct = new Product
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Sku = product.Sku,
+            Barcode = product.Barcode,
+            PurchasePrice = product.PurchasePrice,
+            SalePrice = product.SalePrice,
+            CurrentStock = product.CurrentStock,
+            CategoryId = product.CategoryId,
+            IsActive = product.IsActive,
+            CreatedAtUtc = product.CreatedAtUtc,
+            UpdatedAtUtc = product.UpdatedAtUtc
+        };
+        message = null;
+        errorMessage = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        errorMessage = null;
+
+        try
+        {
+            await ProductService.UpdateAsync(editProduct);
+            await LoadProductsAsync();
+            editingProductId = null;
+            editProduct = new Product();
+            message = "Product updated successfully.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while updating the product. Please try again.";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingProductId = null;
+        editProduct = new Product();
+        errorMessage = null;
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            await ProductService.DeleteAsync(id);
+            await LoadProductsAsync();
+            message = "Product deleted.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Could not delete the product. It may be referenced by existing orders.";
+        }
+    }
+}

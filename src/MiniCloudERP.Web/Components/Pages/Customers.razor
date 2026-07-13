@@ -1,0 +1,231 @@
+
+@page "/customers"
+@rendermode InteractiveServer
+@using MiniCloudERP.Business.Customers
+@using MiniCloudERP.Entities.Models
+@inject ICustomerService CustomerService
+
+<PageTitle>Customers</PageTitle>
+
+<h1>Customers</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Add Customer</h5>
+
+        <EditForm Model="newCustomer" OnValidSubmit="AddCustomerAsync">
+            <DataAnnotationsValidator />
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="newCustomer.Name" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Company</label>
+                    <InputText class="form-control" @bind-Value="newCustomer.Company" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" type="email" @bind-Value="newCustomer.Email" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Phone</label>
+                    <InputText class="form-control" @bind-Value="newCustomer.Phone" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tax Number</label>
+                    <InputText class="form-control" @bind-Value="newCustomer.TaxNumber" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">City</label>
+                    <InputText class="form-control" @bind-Value="newCustomer.City" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Address</label>
+                    <InputText class="form-control" @bind-Value="newCustomer.Address" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Add Customer</button>
+        </EditForm>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert alert-success">@message</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (customers is null)
+{
+    <p>Loading...</p>
+}
+else if (customers.Count == 0)
+{
+    <div class="alert alert-info">No customers found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Company</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Tax Number</th>
+                    <th>City</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in customers)
+                {
+                    <tr>
+                        @if (editingCustomerId == customer.Id)
+                        {
+                            <td><input class="form-control form-control-sm" @bind="editCustomer.Name" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editCustomer.Company" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editCustomer.Phone" /></td>
+                            <td><input class="form-control form-control-sm" type="email" @bind="editCustomer.Email" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editCustomer.TaxNumber" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editCustomer.City" /></td>
+                            <td class="text-end">
+                                <button class="btn btn-success btn-sm me-2" @onclick="SaveEditAsync">Save</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>@customer.Name</td>
+                            <td>@customer.Company</td>
+                            <td>@customer.Phone</td>
+                            <td>@customer.Email</td>
+                            <td>@customer.TaxNumber</td>
+                            <td>@customer.City</td>
+                            <td class="text-end">
+                                <button class="btn btn-warning btn-sm me-2" @onclick="() => StartEdit(customer)">Edit</button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteAsync(customer.Id)">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Customer>? customers;
+    private Customer newCustomer = new();
+    private Customer editCustomer = new();
+    private int? editingCustomerId;
+    private string? message;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomersAsync();
+    }
+
+    private async Task LoadCustomersAsync()
+    {
+        customers = await CustomerService.GetAllAsync();
+    }
+
+    private async Task AddCustomerAsync()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(newCustomer.Name))
+        {
+            errorMessage = "Name is required.";
+            return;
+        }
+
+        try
+        {
+            await CustomerService.AddAsync(newCustomer);
+            await LoadCustomersAsync();
+            newCustomer = new Customer();
+            message = "Customer added successfully.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while saving the customer. Please try again.";
+        }
+    }
+
+    private void StartEdit(Customer customer)
+    {
+        editingCustomerId = customer.Id;
+        editCustomer = new Customer
+        {
+            Id = customer.Id,
+            Name = customer.Name,
+            Company = customer.Company,
+            Email = customer.Email,
+            Phone = customer.Phone,
+            TaxNumber = customer.TaxNumber,
+            City = customer.City,
+            Address = customer.Address,
+            IsActive = customer.IsActive,
+            CreatedAtUtc = customer.CreatedAtUtc,
+            UpdatedAtUtc = customer.UpdatedAtUtc
+        };
+        message = null;
+        errorMessage = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(editCustomer.Name))
+        {
+            errorMessage = "Name is required.";
+            return;
+        }
+
+        try
+        {
+            await CustomerService.UpdateAsync(editCustomer);
+            await LoadCustomersAsync();
+            editingCustomerId = null;
+            editCustomer = new Customer();
+            message = "Customer updated successfully.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while updating the customer. Please try again.";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingCustomerId = null;
+        editCustomer = new Customer();
+        errorMessage = null;
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            await CustomerService.DeleteAsync(id);
+            await LoadCustomersAsync();
+            message = "Customer deleted.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Could not delete the customer. It may be referenced by existing orders.";
+        }
+    }
+}

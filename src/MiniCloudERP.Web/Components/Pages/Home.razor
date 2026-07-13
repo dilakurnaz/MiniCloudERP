@@ -1,0 +1,56 @@
+﻿@page "/"
+@using MiniCloudERP.Business.Dashboard
+@inject IDashboardService DashboardService
+
+<PageTitle>Dashboard - MiniCloudERP</PageTitle>
+
+<section class="dashboard-header">
+    <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Dashboard</h1>
+        <p class="text-muted mb-0">A snapshot of customers, catalog, and sales activity.</p>
+    </div>
+</section>
+
+@if (_summary is null)
+{
+    <p>Loading dashboard...</p>
+}
+else
+{
+    <div class="metric-grid">
+        <div class="metric-card">
+            <span>Total Customers</span>
+            <strong>@_summary.CustomerCount</strong>
+        </div>
+        <div class="metric-card">
+            <span>Total Products</span>
+            <strong>@_summary.ProductCount</strong>
+        </div>
+        <div class="metric-card">
+            <span>Total Orders</span>
+            <strong>@_summary.OrderCount</strong>
+        </div>
+        <div class="metric-card">
+            <span>Total Stock</span>
+            <strong>@_summary.TotalStock</strong>
+        </div>
+        <div class="metric-card">
+            <span>Total Sales</span>
+            <strong>@_summary.TotalSales.ToString("C")</strong>
+        </div>
+        <div class="metric-card warning">
+            <span>Low Stock Items</span>
+            <strong>@_summary.LowStockProductCount</strong>
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardSummary? _summary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _summary = await DashboardService.GetSummaryAsync();
+    }
+}

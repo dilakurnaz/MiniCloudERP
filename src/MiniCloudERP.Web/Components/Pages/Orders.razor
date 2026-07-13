@@ -1,0 +1,113 @@
+@page "/orders"
+@rendermode InteractiveServer
+@using MiniCloudERP.Business.Common
+@using MiniCloudERP.Business.Orders
+@using MiniCloudERP.Entities.Enums
+@using MiniCloudERP.Entities.Models
+@inject IOrderService OrderService
+@inject NavigationManager Navigation
+
+<PageTitle>Orders</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Orders</h1>
+    <a class="btn btn-primary" href="orders/create">Create Order</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert alert-success">@message</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (orders is null)
+{
+    <p>Loading...</p>
+}
+else if (orders.Count == 0)
+{
+    <div class="alert alert-info">No orders found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td>@order.OrderNumber</td>
+                        <td>@order.OrderDateUtc.ToLocalTime().ToString("g")</td>
+                        <td>@order.Customer?.Name</td>
+                        <td><span class="badge @GetStatusBadgeClass(order.Status)">@order.Status</span></td>
+                        <td class="text-end">@order.TotalAmount.ToString("C")</td>
+                        <td class="text-end">
+                            <a class="btn btn-outline-primary btn-sm me-2" href="@($"orders/{order.Id}")">Details</a>
+                            @if (order.Status == OrderStatus.Draft)
+                            {
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteAsync(order.Id)">Delete</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Order>? orders;
+    private string? message;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrdersAsync();
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        orders = await OrderService.GetAllAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            await OrderService.DeleteAsync(id);
+            await LoadOrdersAsync();
+            message = "Order deleted.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Could not delete the order.";
+        }
+    }
+
+    private static string GetStatusBadgeClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Draft => "text-bg-secondary",
+        OrderStatus.Confirmed => "text-bg-primary",
+        OrderStatus.Shipped => "text-bg-success",
+        OrderStatus.Cancelled => "text-bg-danger",
+        _ => "text-bg-light"
+    };
+}

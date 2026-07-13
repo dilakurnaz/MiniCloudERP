@@ -1,0 +1,93 @@
+@page "/Account/Login"
+@layout MiniCloudERP.Web.Components.Layout.EmptyLayout
+@attribute [AllowAnonymous]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using MiniCloudERP.DataAccess.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Log in - MiniCloudERP</PageTitle>
+
+<div class="auth-wrapper">
+    <div class="auth-card card shadow-sm">
+        <div class="card-body p-4">
+            <h1 class="h3 mb-1">MiniCloudERP</h1>
+            <p class="text-muted mb-4">Sign in to continue</p>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger py-2">@errorMessage</div>
+            }
+
+            <EditForm Model="Input" method="post" OnValidSubmit="LoginUserAsync" FormName="login">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="name@example.com" />
+                    <ValidationMessage For="() => Input.Email" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="Password" />
+                    <ValidationMessage For="() => Input.Password" />
+                </div>
+
+                <div class="form-check mb-3">
+                    <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" id="rememberMe" />
+                    <label class="form-check-label" for="rememberMe">Remember me</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Log in</button>
+            </EditForm>
+
+            <hr class="my-4" />
+            <p class="small text-muted mb-1">Demo accounts (seeded automatically):</p>
+            <p class="small text-muted mb-0"><strong>Admin:</strong> admin@minicloud.local / Admin123!</p>
+            <p class="small text-muted mb-0"><strong>User:</strong> user@minicloud.local / User123!</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private async Task LoginUserAsync()
+    {
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.Email,
+            Input.Password,
+            Input.RememberMe,
+            lockoutOnFailure: false);
+
+        if (result.Succeeded)
+        {
+            RedirectManager.RedirectTo(ReturnUrl ?? "/");
+        }
+        else
+        {
+            errorMessage = "Invalid email or password.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}

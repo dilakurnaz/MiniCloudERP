@@ -1,0 +1,211 @@
+@page "/categories"
+@rendermode InteractiveServer
+@using MiniCloudERP.Business.Categories
+@using MiniCloudERP.Business.Common
+@using MiniCloudERP.Entities.Models
+@inject ICategoryService CategoryService
+
+<PageTitle>Categories</PageTitle>
+
+<h1>Categories</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Add Category</h5>
+
+        <EditForm Model="newCategory" OnValidSubmit="AddCategoryAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="newCategory.Name" />
+                    <ValidationMessage For="@(() => newCategory.Name)" />
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Description</label>
+                    <InputText class="form-control" @bind-Value="newCategory.Description" />
+                    <ValidationMessage For="@(() => newCategory.Description)" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Add Category</button>
+        </EditForm>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert alert-success">@message</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (categories is null)
+{
+    <p>Loading...</p>
+}
+else if (categories.Count == 0)
+{
+    <div class="alert alert-info">No categories found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Active</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var category in categories)
+                {
+                    <tr>
+                        @if (editingCategoryId == category.Id)
+                        {
+                            <td><input class="form-control form-control-sm" @bind="editCategory.Name" /></td>
+                            <td><input class="form-control form-control-sm" @bind="editCategory.Description" /></td>
+                            <td>
+                                <input type="checkbox" class="form-check-input" @bind="editCategory.IsActive" />
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-success btn-sm me-2" @onclick="SaveEditAsync">Save</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>@category.Name</td>
+                            <td>@category.Description</td>
+                            <td>
+                                @if (category.IsActive)
+                                {
+                                    <span class="badge text-bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">No</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-warning btn-sm me-2" @onclick="() => StartEdit(category)">Edit</button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteAsync(category.Id)">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Category>? categories;
+    private Category newCategory = new();
+    private Category editCategory = new();
+    private int? editingCategoryId;
+    private string? message;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategoriesAsync();
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        categories = await CategoryService.GetAllAsync();
+    }
+
+    private async Task AddCategoryAsync()
+    {
+        errorMessage = null;
+
+        try
+        {
+            await CategoryService.AddAsync(newCategory);
+            await LoadCategoriesAsync();
+            newCategory = new Category();
+            message = "Category added successfully.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while saving the category. Please try again.";
+        }
+    }
+
+    private void StartEdit(Category category)
+    {
+        editingCategoryId = category.Id;
+        editCategory = new Category
+        {
+            Id = category.Id,
+            Name = category.Name,
+            Description = category.Description,
+            IsActive = category.IsActive,
+            CreatedAtUtc = category.CreatedAtUtc,
+            UpdatedAtUtc = category.UpdatedAtUtc
+        };
+        message = null;
+        errorMessage = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        errorMessage = null;
+
+        try
+        {
+            await CategoryService.UpdateAsync(editCategory);
+            await LoadCategoriesAsync();
+            editingCategoryId = null;
+            editCategory = new Category();
+            message = "Category updated successfully.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while updating the category. Please try again.";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingCategoryId = null;
+        editCategory = new Category();
+        errorMessage = null;
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            await CategoryService.DeleteAsync(id);
+            await LoadCategoriesAsync();
+            message = "Category deleted.";
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Could not delete the category.";
+        }
+    }
+}

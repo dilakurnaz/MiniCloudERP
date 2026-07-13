@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MiniCloudERP.Business/MiniCloudERP.Business.csproj" />
+    <Project Path="src/MiniCloudERP.DataAccess/MiniCloudERP.DataAccess.csproj" />
+    <Project Path="src/MiniCloudERP.Entities/MiniCloudERP.Entities.csproj" />
+    <Project Path="src/MiniCloudERP.Web/MiniCloudERP.Web.csproj" />
+  </Folder>
+</Solution>

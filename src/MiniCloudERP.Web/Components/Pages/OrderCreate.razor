@@ -1,0 +1,236 @@
+@page "/orders/create"
+@rendermode InteractiveServer
+@using MiniCloudERP.Business.Common
+@using MiniCloudERP.Business.Customers
+@using MiniCloudERP.Business.Orders
+@using MiniCloudERP.Business.Products
+@using MiniCloudERP.Entities.Enums
+@using MiniCloudERP.Entities.Models
+@inject IOrderService OrderService
+@inject ICustomerService CustomerService
+@inject IProductService ProductService
+@inject NavigationManager Navigation
+
+<PageTitle>Create Order</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Create Order</h1>
+    <a class="btn btn-outline-secondary" href="orders">Back to Orders</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Customer</label>
+                <select class="form-select" @bind="selectedCustomerId">
+                    <option value="0">Select customer...</option>
+                    @if (customers is not null)
+                    {
+                        @foreach (var customer in customers)
+                        {
+                            <option value="@customer.Id">@customer.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Status</label>
+                <select class="form-select" @bind="selectedStatus">
+                    @foreach (var status in Enum.GetValues<OrderStatus>())
+                    {
+                        <option value="@status">@status</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <h5 class="card-title">Order Lines</h5>
+
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Product</label>
+                <select class="form-select" @bind="lineProductId">
+                    <option value="0">Select product...</option>
+                    @if (products is not null)
+                    {
+                        @foreach (var product in products)
+                        {
+                            <option value="@product.Id">@product.Name (@product.Sku) — Stock: @product.CurrentStock — @product.SalePrice.ToString("C")</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Quantity</label>
+                <input class="form-control" type="number" min="1" @bind="lineQuantity" />
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-primary w-100" @onclick="AddLine">Add Line</button>
+            </div>
+        </div>
+
+        @if (lines.Count == 0)
+        {
+            <div class="alert alert-info">Add at least one product line.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Unit Price</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Line Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in lines)
+                        {
+                            <tr>
+                                <td>@line.ProductName</td>
+                                <td class="text-end">@line.UnitPrice.ToString("C")</td>
+                                <td class="text-end">@line.Quantity</td>
+                                <td class="text-end">@((line.UnitPrice * line.Quantity).ToString("C"))</td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RemoveLine(line)">Remove</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3" class="text-end">Order Total</th>
+                            <th class="text-end">@OrderTotal.ToString("C")</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+
+        <button class="btn btn-primary" @onclick="CreateOrderAsync" disabled="@(lines.Count == 0)">Create Order</button>
+    </div>
+</div>
+
+@code {
+    private List<Customer>? customers;
+    private List<Product>? products;
+    private int selectedCustomerId;
+    private OrderStatus selectedStatus = OrderStatus.Draft;
+    private int lineProductId;
+    private int lineQuantity = 1;
+    private readonly List<OrderLineViewModel> lines = [];
+    private string? errorMessage;
+
+    private decimal OrderTotal => lines.Sum(l => l.UnitPrice * l.Quantity);
+
+    protected override async Task OnInitializedAsync()
+    {
+        customers = await CustomerService.GetAllAsync();
+        products = await ProductService.GetAllAsync();
+    }
+
+    private void AddLine()
+    {
+        errorMessage = null;
+
+        if (lineProductId <= 0)
+        {
+            errorMessage = "Select a product.";
+            return;
+        }
+
+        if (lineQuantity <= 0)
+        {
+            errorMessage = "Quantity must be greater than zero.";
+            return;
+        }
+
+        var product = products?.FirstOrDefault(p => p.Id == lineProductId);
+        if (product is null)
+        {
+            errorMessage = "Product not found.";
+            return;
+        }
+
+        var existing = lines.FirstOrDefault(l => l.ProductId == lineProductId);
+        if (existing is not null)
+        {
+            existing.Quantity += lineQuantity;
+        }
+        else
+        {
+            lines.Add(new OrderLineViewModel
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                UnitPrice = product.SalePrice,
+                Quantity = lineQuantity
+            });
+        }
+
+        lineProductId = 0;
+        lineQuantity = 1;
+    }
+
+    private void RemoveLine(OrderLineViewModel line) => lines.Remove(line);
+
+    private async Task CreateOrderAsync()
+    {
+        errorMessage = null;
+
+        if (selectedCustomerId <= 0)
+        {
+            errorMessage = "Customer is required.";
+            return;
+        }
+
+        if (lines.Count == 0)
+        {
+            errorMessage = "At least one order line is required.";
+            return;
+        }
+
+        try
+        {
+            var request = new OrderCreateRequest
+            {
+                CustomerId = selectedCustomerId,
+                Status = selectedStatus,
+                Lines = lines.Select(l => new OrderLineRequest
+                {
+                    ProductId = l.ProductId,
+                    Quantity = l.Quantity
+                }).ToList()
+            };
+
+            var order = await OrderService.CreateAsync(request);
+            Navigation.NavigateTo($"orders/{order.Id}");
+        }
+        catch (BusinessValidationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while creating the order.";
+        }
+    }
+
+    private sealed class OrderLineViewModel
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
+    }
+}
