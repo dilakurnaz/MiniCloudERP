@@ -8,7 +8,7 @@ The project demonstrates a modern .NET application architecture using layered de
 
 
 
-## 🚀 Features
+## Features
 
 - User authentication and authorization
 - Customer management
@@ -21,7 +21,7 @@ The project demonstrates a modern .NET application architecture using layered de
 
 
 
-## 🛠 Technologies
+## Technologies
 
 | Technology | Description |
 |---|---|
@@ -36,7 +36,7 @@ The project demonstrates a modern .NET application architecture using layered de
 
 
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 MiniCloudERP
@@ -70,7 +70,7 @@ Provides the user interface and application logic using Blazor Server.
 
 
 
-# ⚙️ Requirements
+# Requirements
 
 Before running the project, make sure you have:
 
@@ -87,7 +87,7 @@ dotnet --version
 
 
 
-# 📥 Installation
+# Installation
 
 Clone the repository:
 
@@ -109,7 +109,7 @@ dotnet restore
 
 
 
-# 🗄 Database Configuration
+# Database Configuration
 
 The application uses **SQL Server** as the database provider.
 
@@ -133,7 +133,7 @@ Example:
 
 
 
-# 🏗 Database Migration
+# Database Migration
 
 Install Entity Framework Core tools if needed:
 
@@ -149,7 +149,7 @@ dotnet ef database update --project src/MiniCloudERP.DataAccess --startup-projec
 
 
 
-# ▶️ Running the Application
+# Running the Application
 
 Run the application:
 
@@ -173,7 +173,7 @@ http://localhost:xxxx
 
 
 
-# 🔐 Authentication
+# Authentication
 
 The project uses **ASP.NET Core Identity** for user authentication and authorization.
 
@@ -186,7 +186,7 @@ Supported features:
 
 
 
-# 🧩 Development Notes
+# Development Notes
 
 - The application is developed using a layered architecture approach.
 - Entity Framework Core is used for database operations.
@@ -194,7 +194,7 @@ Supported features:
 - Configuration settings should be updated according to the development environment.
 
 
-# 📌 Future Improvements
+# Future Improvements
 
 Possible future enhancements:
 
