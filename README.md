@@ -1,5 +1,5 @@
 # MiniCloudERP
-
+## En altta Turkce olarak calistirma adimlari bulunuyor.
 A simplified Cloud ERP system developed with **ASP.NET Core and Blazor Server**.
 
 MiniCloudERP is a web-based ERP application designed to manage basic business operations such as customer management, product management, user authentication, and database operations.
@@ -204,3 +204,18 @@ Possible future enhancements:
 - Inventory tracking system
 - Cloud deployment
 - API integrations
+
+## Çalıştırma Adımları
+
+1. Bilgisayara .NET 8 SDK kurulmalıdır.
+2. Proje GitHub üzerinden indirilmelidir.
+3. Proje klasöründe terminal açılmalıdır.
+4. Aşağıdaki komutlar çalıştırılmalıdır:
+
+dotnet restore
+
+dotnet ef database update
+
+dotnet run
+
+5. Terminalde verilen localhost adresi tarayıcıdan açılmalıdır.
