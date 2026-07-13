@@ -8,7 +8,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
     public AppDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("MINICLOUDERP_CONNECTION_STRING")
-            ?? "Server=localhost,1433;Database=MiniCloudErpDb;User Id=sa;Password=Your_password123;TrustServerCertificate=True;MultipleActiveResultSets=true";
+            ?? "Server=localhost,1433;Database=MiniCloudErpDb;User Id=sa;Password=MiniCloud2026Secure;TrustServerCertificate=True;MultipleActiveResultSets=true";
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsBuilder.UseSqlServer(connectionString);
